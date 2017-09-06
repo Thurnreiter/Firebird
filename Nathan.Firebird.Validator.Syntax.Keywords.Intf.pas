@@ -36,14 +36,27 @@ type
   {$ENDREGION}
 
   {$REGION 'IFb25Parser'}
+  TFb25ParserNotifyEvent = reference to procedure(Token: IFb25Token);
+
+  IFb25Parser = interface;
+
+  IVisitor = interface
+    ['{1BAA5277-A327-4B58-BED8-4B964E90D949}']
+    procedure Visit(Instance: IFb25Parser);
+  end;
+
   IFb25Parser = interface
     ['{09CA22CD-0900-4D58-8DC5-D567073C5C07}']
     function GetTokens(): TList<IFb25Token>;
     procedure SetTokens(Value: TList<IFb25Token>);
 
-    function PredictiveAnalytics(): Boolean;
+    function GetOnNotify(): TFb25ParserNotifyEvent;
+    procedure SetOnNotify(Value: TFb25ParserNotifyEvent);
+
+    procedure Accept(Visitor: IVisitor);
 
     property Tokens: TList<IFb25Token> read GetTokens write SetTokens;
+    property OnNotify: TFb25ParserNotifyEvent read GetOnNotify write SetOnNotify;
   end;
   {$ENDREGION}
 

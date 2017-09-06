@@ -25,15 +25,24 @@ type
     procedure TearDown();
   published
     [Test]
-    procedure Test_PredictiveAnalytics_CreateDomain;
+    procedure Test_FirstTestWithVisitorPattern();
+
+    [Test]
+    procedure Test_CreateDomain_IsCorrect();
 
     [Test]
     [TestCase('IsCorrect', 'True')]
     [TestCase('IsIncorrect', 'False')]
-    procedure Test_PredictiveAnalytics_InsertInto(Value: Boolean);
+    procedure Test_InsertInto(Value: Boolean);
 
     [Test]
-    procedure Test_PredictiveAnalytics_With2InsertInto_FirstOk_SecondWrong();
+    procedure Test_HasTerminatatorCharacters();
+
+    [Test]
+    procedure Test_SimpleTestWithAllVisitors();
+
+    [Test]
+    procedure Test_HowToMockAFb25Parser();
   end;
 
 {$M-}
@@ -41,6 +50,8 @@ type
 implementation
 
 uses
+  System.Rtti,
+  Delphi.Mocks,
   Nathan.Firebird.Validator.Syntax.Keywords.Parser,
   Nathan.Firebird.Validator.Syntax.Keywords.Token,
   Nathan.Firebird.Validator.Syntax.Keywords.Scanner,
@@ -151,25 +162,136 @@ begin
   Result.Add(TFb25Token.Create(';', fb25TerminatorCharacter));
 end;
 
-procedure TTestFirebird25Parser.Test_PredictiveAnalytics_CreateDomain;
+procedure TTestFirebird25Parser.Test_FirstTestWithVisitorPattern();
 var
-  Actual: Boolean;
+  ActualOnEventCounter: Integer;
 begin
-  FCut.Tokens := CreateStubDomainTokens();
-  Actual := FCut.PredictiveAnalytics();
-  Assert.IsTrue(Actual);
-end;
-
-procedure TTestFirebird25Parser.Test_PredictiveAnalytics_InsertInto(Value: Boolean);
-begin
-  FCut.Tokens := CreateStubInsertIntoTokens(2, Value);
-  Assert.AreEqual(Value, FCut.PredictiveAnalytics());
-end;
-
-procedure TTestFirebird25Parser.Test_PredictiveAnalytics_With2InsertInto_FirstOk_SecondWrong();
-begin
+  //  Arrange,
+  ActualOnEventCounter := 0;
   FCut.Tokens := CreateStubInsertIntoTokens2();
-  Assert.IsFalse(FCut.PredictiveAnalytics());
+  FCut.OnNotify :=
+    procedure(Item: IFb25Token)
+    begin
+      Inc(ActualOnEventCounter);
+      Assert.AreEqual('2, ''Werkstatt'', ''Werbung''', Item.Value);
+      Assert.AreEqual(fb25Arguments, Item.Token);
+    end;
+
+  //  Act
+  FCut.Accept(TFb25VisitorArguments.Create);
+
+  //  Assert
+  Assert.AreEqual(1, ActualOnEventCounter);
+end;
+
+procedure TTestFirebird25Parser.Test_CreateDomain_IsCorrect();
+var
+  ActualOnEventCounter: Integer;
+begin
+  //  Arrange,
+  ActualOnEventCounter := 0;
+  FCut.Tokens := CreateStubDomainTokens();
+  FCut.OnNotify :=
+    procedure(Item: IFb25Token)
+    begin
+      Inc(ActualOnEventCounter);
+    end;
+
+  //  Act
+  FCut.Accept(TFb25VisitorArguments.Create);
+
+  //  Assert
+  Assert.AreEqual(0, ActualOnEventCounter);
+end;
+
+procedure TTestFirebird25Parser.Test_InsertInto(Value: Boolean);
+var
+  ActualOnEventCounter: Integer;
+begin
+  //  Arrange,
+  ActualOnEventCounter := 0;
+  FCut.Tokens := CreateStubInsertIntoTokens(2, Value);
+  FCut.OnNotify :=
+    procedure(Item: IFb25Token)
+    begin
+      Inc(ActualOnEventCounter);
+    end;
+
+  //  Act
+  FCut.Accept(TFb25VisitorArguments.Create);
+
+  //  Assert
+  if Value then
+    Assert.AreEqual(0, ActualOnEventCounter)    //  Don't find any error...
+  else
+    Assert.AreNotEqual(0, ActualOnEventCounter) //  Find any error...
+end;
+
+procedure TTestFirebird25Parser.Test_HasTerminatatorCharacters();
+var
+  ActualOnEventCounter: Integer;
+begin
+  //  Arrange,
+  ActualOnEventCounter := 0;
+  FCut.Tokens := CreateStubInsertIntoTokens2();
+  FCut.OnNotify :=
+    procedure(Item: IFb25Token)
+    begin
+      Inc(ActualOnEventCounter);
+    end;
+
+  //  Act
+  FCut.Accept(TFb25TerminatorCharacters.Create);
+
+  //  Assert
+  Assert.AreEqual(2, ActualOnEventCounter);
+end;
+
+procedure TTestFirebird25Parser.Test_SimpleTestWithAllVisitors;
+var
+  ActualOnEventCounter: Integer;
+begin
+  //  Arrange,
+  ActualOnEventCounter := 0;
+  FCut.Tokens := CreateStubInsertIntoTokens2();
+  FCut.OnNotify :=
+    procedure(Item: IFb25Token)
+    begin
+      Inc(ActualOnEventCounter);
+    end;
+
+  //  Act
+  FCut.Accept(TFb25VisitorArguments.Create);
+  FCut.Accept(TFb25TerminatorCharacters.Create);
+
+  //  Assert
+  //  1 x Argumentserror, 2 x Terminator Characters...
+  Assert.AreEqual(3, ActualOnEventCounter);
+end;
+
+procedure TTestFirebird25Parser.Test_HowToMockAFb25Parser();
+var
+  Cut: TMock<IFb25Parser>;
+  Vis: IVisitor;
+  Event: TFb25ParserNotifyEvent;
+  ActualOnEventCounter: Integer;
+begin
+  Event :=
+    procedure(Token: IFb25Token)
+    begin
+      Inc(ActualOnEventCounter);
+    end;
+
+  ActualOnEventCounter := 0;
+  Cut := TMock<IFb25Parser>.Create;
+  Cut.Setup.WillReturn(CreateStubInsertIntoTokens2()).When.Tokens;
+  Cut.Setup.WillReturn((TValue.From<TFb25ParserNotifyEvent>(Event))).When.OnNotify;
+  //  Cut.Instance.OnNotify := Event;
+
+  Vis := TFb25TerminatorCharacters.Create;
+  Vis.Visit(Cut);
+
+  Assert.AreEqual(2, ActualOnEventCounter);
 end;
 
 initialization

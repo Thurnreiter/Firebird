@@ -26,6 +26,7 @@ type
     function IsTerminatorCharacter(const Identifier: string): Boolean;
     function HasOpenBracket(): Boolean;
     function HasWhitespacesWithoutOpenBracket(): Boolean;
+    function SearchingKeywords(const Keyword: string; const List: TArray<String>): Boolean;
 		function GetIdentifierToken(const Identifier: string): IFb25Token;
   public
     constructor Create();
@@ -112,9 +113,18 @@ begin
     Result := (not HasOpenBracket());
 end;
 
-function TFb25Scanner.GetIdentifierToken(const Identifier: string): IFb25Token;
+function TFb25Scanner.SearchingKeywords(const Keyword: string; const List: TArray<String>): Boolean;
 var
   Idx: Cardinal;
+begin
+  for Idx := Low(List) to High(List) do
+    if Keyword.ToLower.StartsWith(List[Idx].ToLower) then
+      Exit(True);
+
+  Result := False;
+end;
+
+function TFb25Scanner.GetIdentifierToken(const Identifier: string): IFb25Token;
 begin
   if String.IsNullOrWhiteSpace(Identifier) or Identifier.IsEmpty then
     Exit(TFb25Token.Create(Identifier, fb25None));
@@ -124,19 +134,16 @@ begin
     Exit(TFb25Token.Create(Identifier, fb25TerminatorCharacter));
 
   //  Normal or beginning operator...
-  for Idx := Low(Firebird25DDLBeginning) to High(Firebird25DDLBeginning) do
-    if Identifier.ToLower.StartsWith(Firebird25DDLBeginning[Idx].ToLower) then
-      Exit(TFb25Token.Create(Identifier, fb25Starter));
+  if SearchingKeywords(Identifier, Firebird25DDLBeginning) then
+    Exit(TFb25Token.Create(Identifier, fb25Starter));
 
   //  All other keywords...
-  for Idx := Low(Firebird25Keywords) to High(Firebird25Keywords) do
-    if Identifier.ToLower.StartsWith(Firebird25Keywords[Idx].ToLower) then
-      Exit(TFb25Token.Create(Identifier, fb25Operator));
+  if SearchingKeywords(Identifier, Firebird25Keywords) then
+    Exit(TFb25Token.Create(Identifier, fb25Operator));
 
   //  All other reserved keywords...
-  for Idx := Low(Firebird25ReservedWords) to High(Firebird25ReservedWords) do
-    if Identifier.ToLower.StartsWith(Firebird25ReservedWords[Idx].ToLower) then
-      Exit(TFb25Token.Create(Identifier, fb25Operator));
+  if SearchingKeywords(Identifier, Firebird25ReservedWords) then
+    Exit(TFb25Token.Create(Identifier, fb25Operator));
 
   if HasOpenBracket() then
     Result := TFb25Token.Create(Identifier, fb25Arguments)

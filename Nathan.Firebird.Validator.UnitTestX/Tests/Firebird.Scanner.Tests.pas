@@ -56,7 +56,7 @@ type
 
     [Test]
     [TestCase('CounterRes01', 'InsertInitalData01,83')]
-    [TestCase('CounterRes02', 'InsertInto01,22')]
+    [TestCase('CounterRes02', 'InsertInto01,24')]
     procedure Test_Execute_TokenCounter_OverResources(const ResNameValue: string; ExpectedValue: Integer);
 
     [Test]
