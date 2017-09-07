@@ -94,7 +94,7 @@ begin
     begin
       if Assigned(ArgLeft) then
       begin
-        ArgRight := Each.Value.Split([',']);
+        ArgRight := Each.Value.Split([','], '''');
         if (Assigned(Instance.OnNotify) and (not (High(ArgLeft) = High(ArgRight)))) then
           Instance.OnNotify(Each);
 
@@ -102,7 +102,7 @@ begin
         ArgRight := nil;
       end
       else
-        ArgLeft := Each.Value.Split([',']);
+        ArgLeft := Each.Value.Split([','], '''');
     end;
   end;
 end;

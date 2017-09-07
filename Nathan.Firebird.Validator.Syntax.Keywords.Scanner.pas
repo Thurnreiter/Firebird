@@ -24,6 +24,9 @@ type
     procedure ScanTokens();
 
     function IsTerminatorCharacter(const Identifier: string): Boolean;
+    function WeAreInText(const Value: string): Boolean;
+    function HasOpenCharacters(Open, Close: TFb25TokenKind): Boolean;
+    function HasOpenApostrophe(): Boolean;
     function HasOpenBracket(): Boolean;
     function HasWhitespacesWithoutOpenBracket(): Boolean;
     function SearchingKeywords(const Keyword: string; const List: TArray<String>): Boolean;
@@ -74,6 +77,21 @@ begin
   FScanning := Value;
 end;
 
+function TFb25Scanner.WeAreInText(const Value: string): Boolean;
+var
+  Idx: Integer;
+  Counter: Integer;
+begin
+  Counter := 0;
+  for Idx := Value.Length downto 1 do
+  begin
+    if CharInSet(Value[Idx], ['"', '''']) then
+      Inc(Counter);
+  end;
+
+  Result := (Counter mod 2) <> 0;
+end;
+
 function TFb25Scanner.IsTerminatorCharacter(const Identifier: string): Boolean;
 var
   Idx: Integer;
@@ -85,7 +103,7 @@ begin
   Result := False;
 end;
 
-function TFb25Scanner.HasOpenBracket(): Boolean;
+function TFb25Scanner.HasOpenCharacters(Open, Close: TFb25TokenKind): Boolean;
 var
   Idx: Integer;
 begin
@@ -96,14 +114,24 @@ begin
   Idx := FList.Count;
   while Idx > 0 do
   begin
-    if FList[Idx - 1].Token in [fb25BracketClose] then
+    if FList[Idx - 1].Token in [Close] then
       Exit(False);
 
-    if FList[Idx - 1].Token in [fb25BracketOpen] then
+    if FList[Idx - 1].Token in [Open] then
       Exit(True);
 
     Dec(Idx);
   end;
+end;
+
+function TFb25Scanner.HasOpenApostrophe(): Boolean;
+begin
+  Result := HasOpenCharacters(fb25ApostropheOpen, fb25ApostropheClose);
+end;
+
+function TFb25Scanner.HasOpenBracket(): Boolean;
+begin
+  Result := HasOpenCharacters(fb25BracketOpen, fb25BracketClose);
 end;
 
 function TFb25Scanner.HasWhitespacesWithoutOpenBracket(): Boolean;
@@ -176,7 +204,8 @@ begin
       Continue;
     end;
 
-    if CharInSet(FScanning[FCursor], ['(', '[', '{']) then
+    if (CharInSet(FScanning[FCursor], ['(', '[', '{'])
+    and (not WeAreInText(TokenString))) then
     begin
       Joiner(GetIdentifierToken(TokenString));
       TokenString := '';
@@ -185,7 +214,8 @@ begin
       Inc(FCursor);
     end;
 
-    if CharInSet(FScanning[FCursor], [')', ']', '}']) then
+    if (CharInSet(FScanning[FCursor], [')', ']', '}'])
+    and (not WeAreInText(TokenString))) then
     begin
       Joiner(GetIdentifierToken(TokenString));
 
@@ -211,14 +241,22 @@ begin
       Continue;
     end;
 
-//    if CharInSet(FScanning[FCursor], ['"']) then
+//    if CharInSet(FScanning[FCursor], ['"', '''']) then
 //    begin
-//      Joiner(TFb25Token.Create(FScanning[FCursor], fb25Apostrophe));
+//      if HasOpenApostrophe() then
+//        Joiner(TFb25Token.Create(FScanning[FCursor], fb25ApostropheClose))
+//      else
+//        Joiner(TFb25Token.Create(FScanning[FCursor], fb25ApostropheOpen));
+//
 //      Inc(FCursor);
 //      Continue;
 //    end;
 
     TokenString := TokenString + FScanning[FCursor];
+
+    if TokenString.Contains('43, NULL, ''Peugeot ') then
+      TokenString := TokenString;
+
     Inc(FCursor);
   end;
 

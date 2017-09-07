@@ -25,7 +25,6 @@ type
     fb25RoundBracketOpen,
     fb25RoundBracketClose,
 
-    fb25Apostrophe,
     fb25ApostropheOpen,
     fb25ApostropheClose,
 

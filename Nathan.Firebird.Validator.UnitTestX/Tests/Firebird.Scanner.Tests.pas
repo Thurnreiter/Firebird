@@ -9,6 +9,14 @@ uses
   Nathan.Firebird.Validator.Syntax.Keywords.Scanner,
   Nathan.Firebird.Validator.Syntax.Keywords.Types;
 
+const
+  InText01 = 'INSERT INTO MARKENDATEN (MAD_FNR, MAD_FKRDNR, MAD_FMARKE, MAD_FORDNER, MAD_FLEADZERO, MAD_FANPASSEN, MAD_FGKKORREKTUR, MAD_FDATATYPE, MAD_FDATUM)'
+    + sLineBreak
+    + '                 VALUES (43, NULL, ''Peugeot (Franz)'', ''Peugeot'', ''1'', ''0'', ''0'', NULL, NULL);';
+  InText02 = 'INSERT INTO MARKENDATEN (MAD_FNR, MAD_FKRDNR, MAD_FMARKE, MAD_FORDNER, MAD_FLEADZERO, MAD_FANPASSEN, MAD_FGKKORREKTUR, MAD_FDATATYPE, MAD_FDATUM)'
+    + sLineBreak
+    + '                 VALUES (16, NULL, ''FZR, Reussbühl'', ''FZR'', ''0'', ''0'', ''0'', NULL, NULL);';
+
 {$M+}
 
 type
@@ -69,6 +77,8 @@ type
     [TestCase('ScannerCounter07', 'select cfg_fnr from config|7', '|')]
     [TestCase('ScannerCounter08', 'select Count(*) from config|10', '|')]
     [TestCase('ScannerCounter09', 'select Count(*) from config;|11', '|')]
+    [TestCase('WithBracketsInText01', InText01 + '|34', '|')]
+    [TestCase('WithBracketsInText02', InText02 + '|34', '|')]
     procedure Test_RPN_ReversePolishNotation(const ValueStatement: string; ExpectedValue: Integer);
   end;
 
@@ -314,20 +324,23 @@ end;
 procedure TTestFirebird25Scanner.Test_RPN_ReversePolishNotation(
   const ValueStatement: string; ExpectedValue: Integer);
 var
+  Tokens: TList<IFb25Token>;
   Each: IFb25Token;
   ActualValue: string;
-  ActualTokens: TList<IFb25Token>;
+  ActualKind: TFb25TokenKind;
 begin
   FCut.Statement := ValueStatement;
-  ActualTokens := FCut.Execute().Tokens;
-  for Each in ActualTokens do
+  Tokens := FCut.Execute().Tokens;
+
+  for Each in Tokens do
   begin
     ActualValue := Each.Value;
+    ActualKind := Each.Token;
     Assert.AreNotEqual('', ActualValue);
-    Assert.AreEqual(ActualValue, Each.Value);
+    Assert.AreNotEqual(TFb25TokenKind.fb25None, ActualKind);
   end;
 
-  Assert.AreEqual(ExpectedValue, ActualTokens.Count);
+  Assert.AreEqual(ExpectedValue, Tokens.Count);
 end;
 
 initialization
