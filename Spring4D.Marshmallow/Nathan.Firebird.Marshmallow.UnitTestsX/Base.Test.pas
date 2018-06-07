@@ -70,7 +70,7 @@ begin
   FDatabase := TIBDataBase.Create(nil);
   FDatabase.DatabaseName := LocalDbName;
   FDatabase.Params.Add('user_name=Sysdba');
-  FDatabase.Params.Add('password=a10227');
+  FDatabase.Params.Add('password=masterkey');
   FDatabase.Params.Add('lc_ctype=WIN1252');
   FDatabase.LoginPrompt := False;
   //  FDatabase.Connected
